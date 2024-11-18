@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GrafIcAs</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #181818;
+            color: #f1f1f1;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #212121;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        h1, h2 {
+            text-align: center;
+            color: #00BFA6;
+        }
+        canvas {
+            margin-top: 20px;
+        }
+        .data-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .data-input input {
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background: #2e2e2e;
+            color: #f1f1f1;
+        }
+        .data-input input[type="color"] {
+            border: none;
+            width: 40px;
+            padding: 0;
+        }
+        .data-input span {
+            color: #ff5252;
+            cursor: pointer;
+        }
+        .controls select, .controls button {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background: #2e2e2e;
+            color: #f1f1f1;
+            cursor: pointer;
+        }
+        .controls select:hover, .controls button:hover {
+            background: #373737;
+        }
+        .feedback-section textarea, .feedback-section select, .feedback-section button {
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background: #2e2e2e;
+            color: #f1f1f1;
+        }
+        .feedback-section button:hover {
+            background: #373737;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GrafIcAs</h1>
+        <form id="dataForm">
+            <div id="dataInputs">
+                <div class="data-input" id="dato1">
+                    <input type="number" placeholder="Valor" required>
+                    <input type="text" placeholder="Nombre" required>
+                    <input type="color" value="#36A2EB">
+                    <span onclick="removeData(1)">Eliminar</span>
+                </div>
+            </div>
+            <button type="button" id="addDataButton">Agregar Dato</button>
+        </form>
+
+        <div class="controls">
+            <label for="chartType">Tipo de gráfico:</label>
+            <select id="chartType">
+                <option value="bar">Barras</option>
+                <option value="pie">Pastel</option>
+                <option value="radar">Radar</option>
+                <option value="line">Líneas</option>
+                <option value="doughnut">Dona</option>
+                <option value="polarArea">Área Polar</option>
+                <option value="bubble">Burbuja</option>
+                <option value="scatter">Dispersión</option>
+            </select>
+
+            <label for="numberFormat">Formato de número:</label>
+            <select id="numberFormat">
+                <option value="normal">Normal</option>
+                <option value="percentage">Porcentaje</option>
+                <option value="decimal">Decimal</option>
+            </select>
+        </div>
+
+        <canvas id="myChart"></canvas>
+
+        <div class="feedback-section">
+            <h2>Valoración y Comentarios</h2>
+            <textarea id="comments" rows="4" placeholder="Escribe tus comentarios aquí..."></textarea>
+            <button type="button" onclick="submitFeedback()">Enviar</button>
+        </div>
+    </div>
+
+    <script>
+        let chartInstance = null;
+
+        // Actualiza el gráfico automáticamente
+        document.getElementById('chartType').addEventListener('change', updateChart);
+        document.getElementById('numberFormat').addEventListener('change', updateChart);
+
+        // Agregar dato
+        document.getElementById('addDataButton').addEventListener('click', function () {
+            const index = document.getElementById('dataInputs').children.length + 1;
+            const newInput = document.createElement('div');
+            newInput.className = 'data-input';
+            newInput.id = `dato${index}`;
+            newInput.innerHTML = `
+                <input type="number" placeholder="Valor" required>
+                <input type="text" placeholder="Nombre" required>
+                <input type="color" value="#36A2EB">
+                <span onclick="removeData(${index})">Eliminar</span>
+            `;
+            document.getElementById('dataInputs').appendChild(newInput);
+            updateChart();
+        });
+
+        // Eliminar dato
+        function removeData(index) {
+            const inputToRemove = document.getElementById(`dato${index}`);
+            if (inputToRemove) inputToRemove.remove();
+            updateChart();
+        }
+
+        // Generar gráfico
+        function updateChart() {
+            const dataInputs = Array.from(document.querySelectorAll('.data-input'));
+            const data = dataInputs.map(input => parseFloat(input.children[0].value) || 0);
+            const labels = dataInputs.map(input => input.children[1].value || 'Dato');
+            const colors = dataInputs.map(input => input.children[2].value);
+
+            const chartType = document.getElementById('chartType').value;
+            const numberFormat = document.getElementById('numberFormat').value;
+
+            const formattedData = formatData(data, numberFormat);
+
+            if (chartInstance) chartInstance.destroy();
+
+            const ctx = document.getElementById('myChart').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: chartType,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: formattedData,
+                        backgroundColor: colors,
+                        borderColor: colors,
+                        borderWidth: 1
+                    }]
+                },
+                options: { responsive: true }
+            });
+        }
+
+        // Formato de números
+        function formatData(data, format) {
+            if (format === 'percentage') return data.map(d => (d / data.reduce((a, b) => a + b, 0)) * 100);
+            if (format === 'decimal') return data.map(d => parseFloat(d.toFixed(2)));
+            return data;
+        }
+
+        // Enviar valoración y comentarios
+        function submitFeedback() {
+            const comments = document.getElementById('comments').value;
+            if (!comments.trim()) {
+                alert("Por favor, escribe un comentario.");
+            } else {
+                alert("¡Gracias por tus comentarios!");
+            }
+        }
+    </script>
+</body>
+</html>
